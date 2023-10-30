@@ -1,0 +1,113 @@
+---
+title: "RCTs PSET 2"
+author: "Matthew Zhao"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document: 
+    keep_tex: yes
+header-includes:
+  \usepackage{dcolumn}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse,lubridate,stargazer,xtable,kableExtra)
+```
+
+## 1 Randomization and Balance Checks
+
+### 1.1
+
+Brune et al. (2021) asks what is the impact of offering a deferred savings program to workers on saving/investment outcomes and what are the mechanisms which affect take-up and use. 
+
+### 1.2
+
+```{r}
+# clear environment
+rm(list = ls())
+
+# set seed
+set.seed(2090820)
+
+# import data
+df_complete <- read.csv('data/brune_et_al_data.csv')
+
+# complete randomization
+n <- df_complete %>% nrow()
+
+df_complete$rand <- runif(n, 0, 1)
+df_complete$rank <- rank(df_complete$rand)
+
+df_complete$treat <- ifelse(df_complete$rank <= (n / 2), 1, 0)
+
+table(df_complete$treat)
+```
+
+### 1.3
+
+```{r results=F}
+complete_summary <- df_complete %>%
+  group_by(treat) %>%
+  summarise(female_w = sum(female_w),
+            d_married_w = sum(d_married_w),
+            worker_age_w = mean(worker_age_w),
+            plucker_w = sum(plucker_w),
+            sav_all_tot_tot_w = mean(sav_all_tot_tot_w),
+            .groups = 'keep') %>%
+  pivot_longer(cols=!treat,names_to = 'name', values_to = 'value') %>%
+  mutate(value = round(value,2)) %>%
+  pivot_wider(names_from = treat, names_prefix = 'treat_', 
+              values_from = value)
+
+complete_stats <- df_complete %>%
+  select(treat, female_w, d_married_w, 
+         worker_age_w, plucker_w, sav_all_tot_tot_w) %>%
+  pivot_longer(cols=!treat,
+               names_to='name',values_to='value') %>%
+  group_by(name) %>%
+  summarise(tstat = t.test(value ~ treat)$statistic,
+            pval = t.test(value ~ treat)$p.value,
+            .groups='keep')
+
+complete_bal <- left_join(complete_summary,
+                          complete_stats,
+                          by='name')
+complete_bal_tab <- xtable(complete_bal)
+align(complete_bal_tab) <- xalign(complete_bal_tab)
+display(complete_bal_tab) <- xdisplay(complete_bal_tab)
+print(complete_bal_tab, include.rownames=FALSE)
+```
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrrr}
+  \hline
+name & treat\_0 & treat\_1 & tstat & pval \\ 
+  \hline
+female\_w & 159.00 & 142.00 & 1.21 & 0.23 \\ 
+  d\_married\_w & 301.00 & 308.00 & -0.52 & 0.61 \\ 
+  worker\_age\_w & 39.56 & 39.47 & 0.13 & 0.90 \\ 
+  plucker\_w & 341.00 & 326.00 & 1.20 & 0.23 \\ 
+  sav\_all\_tot\_tot\_w & 31968.41 & 32160.47 & -0.06 & 0.96 \\ 
+   \hline
+\end{tabular}
+\end{table} 
+
+
+### 1.4
+
+```{r}
+# stratified randomization
+# df$rand <- runif(n, 0, 1)
+# 
+# for (village in 1:max(df$village_id)) {
+#   in_village <- (df$village_id == village)
+#   str_treat_i <- in_village * (df$rand < median(df$rand[in_village]))
+#   df$treat_strat <- df$treat_strat + str_treat_i
+# }
+```
+
+### 1.5
+
+
+
