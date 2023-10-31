@@ -242,17 +242,6 @@ rand_control_ids <- df_strat %>%
 rand_ids <- bind_rows(rand_treat_ids,
           rand_control_ids)
 rand_ids
-survey_info_df <- df_strat %>%
-       filter(worker_id %in% c(rand_treat_ids$worker_id,
-                               rand_control_ids$worker_id)
-              ) %>%
-       select(worker_id, worker_age_w, follow_up_emp, follow_up_emp_Lujeri,
-              follow_up_emp_other, follow_up_days_worked_Luj,
-              follow_up_days_plucking, income_total_w,
-              follow_up_large_purchases,
-              FU_purch_varlist, FU_purch_livestock, FU_purch_metal_roof,
-              FU_purch_home_imprv, FU_purch_phys_asset, FU_purch_new_house,
-              follow_up_purchase_other)
 ```
 
 Below I provide code which processes the data from my test survey (I manually inputted the data of the above workers).
