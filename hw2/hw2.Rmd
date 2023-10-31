@@ -35,9 +35,12 @@ df_complete <- read.csv('data/brune_et_al_data.csv')
 # complete randomization
 n <- df_complete %>% nrow()
 
+# n draws from uniform(0,1), essentially assigning a random number to each worker
+# when combined with rank
 df_complete$rand <- runif(n, 0, 1)
 df_complete$rank <- rank(df_complete$rand)
 
+# assigns top half of random rank to control, bottom to treatment
 df_complete$treat <- ifelse(df_complete$rank <= (n / 2), 1, 0)
 
 table(df_complete$treat)
@@ -65,7 +68,8 @@ complete_stats <- df_complete %>%
   pivot_longer(cols=!treat,
                names_to='name',values_to='value') %>%
   group_by(name) %>%
-  summarise(tstat = t.test(value ~ treat)$statistic,
+  summarise(
+            tstat = t.test(value ~ treat)$statistic,
             pval = t.test(value ~ treat)$p.value,
             .groups='keep')
 
@@ -98,16 +102,62 @@ female\_w & 159.00 & 142.00 & 1.21 & 0.23 \\
 
 ```{r}
 # stratified randomization
-# df$rand <- runif(n, 0, 1)
-# 
-# for (village in 1:max(df$village_id)) {
-#   in_village <- (df$village_id == village)
-#   str_treat_i <- in_village * (df$rand < median(df$rand[in_village]))
-#   df$treat_strat <- df$treat_strat + str_treat_i
-# }
+
+# clear environment
+rm(list = ls())
+
+# set seed
+set.seed(2090820)
+
+# import data
+df_strat <- read.csv('data/brune_et_al_data.csv')
+
+n <- df_strat %>% nrow()
+df_strat$rand <- runif(n, 0, 1)
+
+df_strat <- df_strat %>%
+  group_by(division) %>%
+  mutate(treat_strat = ifelse(rand <= quantile(rand,c(0.33)), 0, 1))
+
+df_strat %>% 
+  count(division, treat_strat) %>% 
+  pivot_wider(names_from = treat_strat, 
+              names_prefix = 'treat_',
+              values_from = n)
 ```
 
 ### 1.5
 
+```{r results=F}
+strat_summary <- df_strat %>%
+  group_by(treat) %>%
+  summarise(female_w = sum(female_w),
+            d_married_w = sum(d_married_w),
+            worker_age_w = mean(worker_age_w),
+            plucker_w = sum(plucker_w),
+            sav_all_tot_tot_w = mean(sav_all_tot_tot_w),
+            .groups = 'keep') %>%
+  pivot_longer(cols=!treat,names_to = 'name', values_to = 'value') %>%
+  mutate(value = round(value,2)) %>%
+  pivot_wider(names_from = treat, names_prefix = 'treat_', 
+              values_from = value)
 
+strat_stats <- df_strat %>%
+  select(treat, female_w, d_married_w, 
+         worker_age_w, plucker_w, sav_all_tot_tot_w) %>%
+  pivot_longer(cols=!treat,
+               names_to='name',values_to='value') %>%
+  group_by(name) %>%
+  summarise(tstat = t.test(value ~ treat)$statistic,
+            pval = t.test(value ~ treat)$p.value,
+            .groups='keep')
+
+strat_bal <- left_join(strat_summary,
+                          strat_stats,
+                          by='name')
+strat_bal_tab <- xtable(strat_bal)
+align(strat_bal_tab) <- xalign(strat_bal_tab)
+display(strat_bal_tab) <- xdisplay(strat_bal_tab)
+print(strat_bal_tab, include.rownames=FALSE)
+```
 
