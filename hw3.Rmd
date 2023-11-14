@@ -11,7 +11,7 @@ header-includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse,lubridate,lmtest)
+pacman::p_load(tidyverse,lubridate,sandwich,lmtest,fixest)
 ```
 
 ## Part 1.1
@@ -81,9 +81,9 @@ for (i in 1:1000) {
   pvals <- c(pvals,pval)
 }
 
-reject5pct <- sum(pvals < 0.10)
-print(paste0('Number of Rejections at 5% Significance Level: ', reject5pct))
-print(paste0('Power: ', reject5pct / 1000 * 100, '%'))
+reject10pct <- sum(pvals < 0.10)
+print(paste0('Number of Rejections at 10% Significance Level: ', reject10pct))
+print(paste0('Power: ', reject10pct / 1000 * 100, '%'))
 ```
 
 ## Part 1.4
@@ -156,20 +156,20 @@ dgp_cluster <- function(n=200) {
 pvals <- c()
 for (i in 1:1000) {
   df <- dgp_cluster()
-  model <- lm(plot_yield ~ treat + village, data = df)
-  pval <- summary(model)$coefficients['treat','Pr(>|t|)']
+  model <- feols(plot_yield ~ treat, data = df,
+           cluster = c('village'))
+  pval <- pvalue(model)[['treat']]
   pvals <- c(pvals,pval)
 }
 
-reject5pct <- sum(pvals < 0.10)
-print(paste0('Number of Rejections at 5% Significance Level: ', reject5pct))
-print(paste0('Power: ', reject5pct / 1000 * 100, '%'))
-
+reject10pct <- sum(pvals < 0.10)
+print(paste0('Number of Rejections at 10% Significance Level: ', reject10pct))
+print(paste0('Power: ', reject10pct / 1000 * 100, '%'))
 ```
 
-
+The power is lower in the clustered designed compared to the individual design. 
 
 ## Part 1.6
 
-
+The power in this case will be lower than either the clustered design from 1.5 or the individual design. This is because the intra-cluster correlation in this case will be higher than in the clustered design from 1.5 since we are grouping individuals by plot yield, thereby artificially increasing the ICC. Higher ICC reduces power by reducing our effective sample size since including more members from the same cluster adds less information/has less variation. 
 
