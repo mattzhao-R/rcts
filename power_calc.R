@@ -20,6 +20,10 @@ fake_data <- data.frame(
 m1 <- lm(wages ~ remoteYes:applyYes, data = fake_data)
 m2 <- lm(wages ~ applyYes + remoteYes:applyYes, data = fake_data)
 
+fake_data %>% 
+  group_by(remoteYes, applyYes) %>%
+  summarise(wg = mean(wages))
+
 # Power Calculation ----
 ## Calculating Sample Size ----
 ### DGP ----
